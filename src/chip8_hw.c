@@ -7,6 +7,7 @@
 void chip8_initialize(struct chip8_hw *chip)
 {
   memset(chip->memory, 0, CHIP8_MEM_SIZE);
+  chip->rom_size = 0;
 
   memset(chip->V, 0, 0xF); // data registers
 
@@ -26,6 +27,22 @@ void chip8_initialize(struct chip8_hw *chip)
   srand(time(NULL));
 }
 
+
+void chip8_emulate_cycle(struct chip8_hw *chip)
+{
+  //DEBUG: loop through everything and make sure we are decoding correctly
+  int pc = 0x200;
+  printf("Chip ROM size: %u\n", chip->rom_size);
+  while(pc < chip->rom_size + 0x200)
+  {
+    chip8_decode_opcode(chip, pc);
+    chip8_dump_registers(chip);
+    pc += 2;
+  }
+}
+
+
+// Private functions
 void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc)
 {
   // TODO make this less terrible than a giant switch
@@ -283,4 +300,16 @@ void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc)
 void chip8_build_sprites(struct chip8_hw *chip)
 {
   //TODO fill 0x000 to 0x1FF with sprite data
+}
+
+void chip8_dump_registers(struct chip8_hw *chip)
+{
+  //Dump the current state of the registers
+  printf("Current register values:\n");
+  uint8_t i;
+  for(i = 0; i <= 0xF; i++)
+  {
+    printf("V%01X:0x%02X, ", i, chip->V[i]);
+  }
+  printf("I:0x%02X, PC:0x%04X, SP:0x%04X\n", chip->I, chip->pc, chip->sp);
 }

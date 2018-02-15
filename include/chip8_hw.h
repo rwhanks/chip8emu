@@ -22,6 +22,7 @@ struct chip8_hw
   +---------------+= 0x000 (0) Start of Chip-8 RAM
   */
 	uint8_t memory[CHIP8_MEM_SIZE];
+	uint16_t rom_size; // size of the ROM currently stored in memory
 
 	uint8_t V[CHIP8_STACK_SIZE]; // data registers
 
@@ -40,10 +41,35 @@ struct chip8_hw
 
 
 // Public functions
+/*
+* Initialize the chip8 emulator and build the sprite table
+* @param *chip - chip8_hw pointer
+*/
 void chip8_initialize(struct chip8_hw *chip);
 
-void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc);
+/*
+* Emulate 1 cycle of the chip8 hardware including decoding the next opcode
+* @param *chip - chip8_hw pointer
+*/
+void chip8_emulate_cycle(struct chip8_hw *chip);
 
 
 // Private functions
+/*
+* Decode an opcode at the current PC -- PC is NOT updated after returning
+* @param *chip - chip8_hw pointer
+* @param pc - current PC location TODO remove
+*/
+void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc);
+
+/*
+* Build the sprite table for the user display
+* @param *chip - chip8_hw pointer
+*/
 void chip8_build_sprites(struct chip8_hw *chip);
+
+/*
+* Print the current register state for debugging
+* @param *chip - chip8_hw pointer
+*/
+void chip8_dump_registers(struct chip8_hw *chip);
