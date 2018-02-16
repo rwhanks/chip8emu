@@ -39,10 +39,10 @@ int main(int argc, char **argv)
   //Start emulation
   //DEBUG only run X instructions
   uint32_t count = 0;
-  while(chip->running && count < 50)
+  while(chip->running )
   {
     chip8_emulate_cycle(chip);
-    count++;
+//    count++;
   }
 
   //SDL_Quit(); //This frees chip->screen

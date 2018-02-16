@@ -80,9 +80,8 @@ void chip8_emulate_cycle(struct chip8_hw *chip);
 /*
 * Decode an opcode at the current PC -- PC is NOT updated after returning
 * @param *chip - chip8_hw pointer
-* @param pc - current PC location TODO remove
 */
-void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc);
+void chip8_decode_opcode(struct chip8_hw *chip);
 
 /*
 * Update the display
