@@ -1,0 +1,4 @@
+define pregs
+  printf "regs: V0=0x%02x, V1=0x%02x, V2=0x%02x, V3=0x%02x, V4=0x%02x, V5=0x%02x, V6=0x%02x, V7=0x%02x, V8=0x%02x, V9=0x%02x, VA=0x%02x, VB=0x%02x, VC=0x%02x, VD=0x%02x, VE=0x%02x, VF=0x%02x, SP=0x%04x, I=0x%04X, PC=0x%04x\n", chip->V[0], chip->V[1], chip->V[2], chip->V[3], chip->V[4], chip->V[5], chip->V[6], chip->V[7], chip->V[8], chip->V[9], chip->V[10], chip->V[11], chip->V[12], chip->V[13], chip->V[14], chip->V[15], chip->sp, chip->I, chip->pc
+
+end
