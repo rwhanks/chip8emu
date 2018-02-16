@@ -4,8 +4,6 @@
 #include <time.h>
 #include "chip8_hw.h"
 
-enum sdl_keymap
-
 void chip8_initialize(struct chip8_hw *chip)
 {
   memset(chip->memory, 0, CHIP8_MEM_SIZE);
@@ -26,12 +24,11 @@ void chip8_initialize(struct chip8_hw *chip)
   chip->running = 0;
 
   chip8_build_sprites(chip);
+  chip8_build_keyboard(chip);
 
   chip->display_x = CHIP8_DISPLAY_X * CHIP8_DISPLAY_SCALE;
   chip->display_y = CHIP8_DISPLAY_Y * CHIP8_DISPLAY_SCALE;
   memset(chip->display_pixels, 0, sizeof(chip->display_pixels[0][0]) * chip->display_x * chip->display_y);
-
-  memset(chip->keyboard, 0, 16);
 
   //initialize so we can use it for CXNN opcode
   srand(time(NULL));
@@ -280,7 +277,7 @@ void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc)
           case 0x9E: //EX9E - skip next instruction if key with value in VX is pressed
             reg = chip->memory[pc] & 0x0F;
             printf("SKP   V%01X\n", reg);
-            if(1 == chip->keyboard[chip->V[reg]])
+            if(1 == chip->keyboard.pressed[chip->V[reg]])
             {
               chip->pc += 2;
             }
@@ -288,7 +285,7 @@ void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc)
           case 0xA1: //EXA1 - skip next instruction if key with value in VX is NOT pressed
             reg = chip->memory[pc] & 0x0F;
             printf("SKNP  V%01X\n", reg);
-            if(0 == chip->keyboard[chip->V[reg]])
+            if(0 == chip->keyboard.pressed[chip->V[reg]])
             {
               chip->pc += 2;
             }
@@ -308,7 +305,7 @@ void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc)
           case 0x0A: //FX0A - blocks until key press and stores in VX
             reg = chip->memory[pc] & 0x0F;
             printf("LD    V%01X, K\n", reg);
-            chip8_poll_for_keypress(chip, reg); //blocks
+            chip->V[reg] = chip8_poll_for_keypress(chip); //blocks
             break;
           case 0x15: //FX15 - set delay timer to VX
             printf("LD    DT, V%01X\n", chip->memory[pc] & 0x0F);
@@ -361,28 +358,48 @@ void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc)
   }
 }
 
+void chip8_build_keyboard(struct chip8_hw *chip)
+{
+
+  // Display keyboard mapping
+  printf("Emulator keyboard mapping:\n");
+  printf("Real keys      Emulated keys\n");
+  printf("|1|2|3|4|  ==  |1|2|3|C|\n");
+  printf("|q|w|e|r|  ==  |4|5|6|D|\n");
+  printf("|a|s|d|f|  ==  |7|8|9|E|\n");
+  printf("|z|x|c|v|  ==  |A|0|B|F|\n\n");
+
+    // Shamelessly borrowed/modified from somewhere on the Internet
+  chip->keyboard.key[0x1] = SDLK_1;
+  chip->keyboard.key[0x2] = SDLK_2;
+  chip->keyboard.key[0x3] = SDLK_3;
+  chip->keyboard.key[0xC] = SDLK_4;
+  chip->keyboard.key[0x4] = SDLK_q;
+  chip->keyboard.key[0x5] = SDLK_w;
+  chip->keyboard.key[0x6] = SDLK_e;
+  chip->keyboard.key[0xD] = SDLK_r;
+  chip->keyboard.key[0x7] = SDLK_a;
+  chip->keyboard.key[0x8] = SDLK_s;
+  chip->keyboard.key[0x9] = SDLK_d;
+  chip->keyboard.key[0xE] = SDLK_f;
+  chip->keyboard.key[0xA] = SDLK_z;
+  chip->keyboard.key[0x0] = SDLK_x;
+  chip->keyboard.key[0xB] = SDLK_c;
+  chip->keyboard.key[0xF] = SDLK_v;
+}
+
 void chip8_update_keyboard(struct chip8_hw *chip, SDL_Event event, uint8_t pressed)
 {
-  // Shamelessly borrowed from somewhere on the Internet
-  switch(event.key.keysym.sym)
+  for(int i=0; i < 16; i++)
   {
-    case SDLK_1: chip->keyboard[0x1] = pressed; break;
-    case SDLK_2: chip->keyboard[0x2] = pressed; break;
-    case SDLK_3: chip->keyboard[0x3] = pressed; break;
-    case SDLK_4: chip->keyboard[0xC] = pressed; break;
-    case SDLK_q: chip->keyboard[0x4] = pressed; break;
-    case SDLK_w: chip->keyboard[0x5] = pressed; break;
-    case SDLK_e: chip->keyboard[0x6] = pressed; break;
-    case SDLK_r: chip->keyboard[0xD] = pressed; break;
-    case SDLK_a: chip->keyboard[0x7] = pressed; break;
-    case SDLK_s: chip->keyboard[0x8] = pressed; break;
-    case SDLK_d: chip->keyboard[0x9] = pressed; break;
-    case SDLK_f: chip->keyboard[0xE] = pressed; break;
-    case SDLK_z: chip->keyboard[0xA] = pressed; break;
-    case SDLK_x: chip->keyboard[0x0] = pressed; break;
-    case SDLK_c: chip->keyboard[0xB] = pressed; break;
-    case SDLK_v: chip->keyboard[0xF] = pressed; break;
-    case SDLK_ESCAPE: exit(1); break;
+    if(event.key.keysym.sym == chip->keyboard.key[i])
+    {
+      chip->keyboard.pressed[i] = pressed;
+    }
+    else if(event.key.keysym.sym == SDLK_ESCAPE)
+    {
+      exit(1);
+    }
   }
 }
 
@@ -394,9 +411,20 @@ uint8_t chip8_poll_for_keypress(struct chip8_hw *chip)
     switch(keyevent.type)
     {
       case SDL_KEYDOWN:
-        return chip->keyboard[]
+        for(int i = 0; i < 16; i++)
+        {
+          if(keyevent.key.keysym.sym == chip->keyboard.key[i])
+          {
+            // Update that its pressed?
+            chip->keyboard.pressed[i] = 1;
+            return i;
+          }
+        }
+        break;
+       default:
+        break;
+      }
     }
-  }
 }
 
 void chip8_build_sprites(struct chip8_hw *chip)

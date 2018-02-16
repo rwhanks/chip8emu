@@ -2,12 +2,21 @@
 
 #include <stdint.h>
 #include "SDL/SDL.h"
+#include "SDL/SDL_keysym.h"
 
 #define CHIP8_STACK_SIZE 16
 #define CHIP8_MEM_SIZE 4096
 #define CHIP8_DISPLAY_SCALE 10
 #define CHIP8_DISPLAY_X 64
 #define CHIP8_DISPLAY_Y 32
+
+struct sdl_keyboard_map
+{
+	// Used to map real keys to chip8 emulated keys
+	uint8_t pressed[16];
+	// Since the keys are 0x0 to 0xF, we'll just index them
+	SDLKey key[16];
+};
 
 struct chip8_hw
 {
@@ -53,7 +62,7 @@ struct chip8_hw
   // array to hold the display pixels
 	uint8_t display_pixels[CHIP8_DISPLAY_X*CHIP8_DISPLAY_SCALE][CHIP8_DISPLAY_Y*CHIP8_DISPLAY_SCALE];
 
-	uint8_t keyboard[16]; //keyboard struct
+	struct sdl_keyboard_map keyboard; //keyboard struct
 };
 
 
@@ -80,12 +89,25 @@ void chip8_emulate_cycle(struct chip8_hw *chip);
 void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc);
 
 /*
+* Build the keyboard mapping
+* @param *chip - chip8_hw pointer
+*/
+void chip8_build_keyboard(struct chip8_hw *chip);
+
+/*
 * Update the chip8 keyboard based on a pressed/released key
 * @param *chip - chip8_hw pointer
 * @param event - the SDL_Event that was triggered; supported events:SDL_KEYDOWN, SDL_KEYUP
 * @param pressed - was the lhe key pressed(1) or released(0)?
 */
 void chip8_update_keyboard(struct chip8_hw *chip, SDL_Event event, uint8_t pressed);
+
+/*
+* Poll for a pressed key -- used for FX0A
+* @param *chip - chip8_hw pointer
+* @return - chip8 key pressed 0x0 to 0xF
+*/
+uint8_t chip8_poll_for_keypress(struct chip8_hw *chip);
 
 /*
 * Build the sprite table for the user display
