@@ -32,7 +32,7 @@ int main(int argc, char **argv)
   SDL_Delay(16);
   SDL_Init(SDL_INIT_EVERYTHING);
   SDL_WM_SetCaption(argv[1], 0);
-  chip->screen = SDL_SetVideoMode(chip->display_x, chip->display_y, 0, 0);
+  chip->screen = SDL_SetVideoMode(CHIP8_DISPLAY_X * CHIP8_DISPLAY_SCALE, CHIP8_DISPLAY_Y * CHIP8_DISPLAY_SCALE, 0, 0);
 
   printf("Running %s, hit ESC to exit\n", argv[1]);
   chip->running = 1;

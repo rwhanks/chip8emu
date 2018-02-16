@@ -55,12 +55,8 @@ struct chip8_hw
 	// TODO gfx, sound, keyboard
 	SDL_Surface *screen;
 
-  // the size of the display in scaled pixels
-	uint16_t display_x;
-	uint16_t display_y;
-
   // array to hold the display pixels
-	uint8_t display_pixels[CHIP8_DISPLAY_X*CHIP8_DISPLAY_SCALE][CHIP8_DISPLAY_Y*CHIP8_DISPLAY_SCALE];
+	uint8_t display_pixels[CHIP8_DISPLAY_X][CHIP8_DISPLAY_Y];
 
 	struct sdl_keyboard_map keyboard; //keyboard struct
 };

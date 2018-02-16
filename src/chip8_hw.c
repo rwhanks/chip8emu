@@ -26,9 +26,7 @@ void chip8_initialize(struct chip8_hw *chip)
   chip8_build_sprites(chip);
   chip8_build_keyboard(chip);
 
-  chip->display_x = CHIP8_DISPLAY_X * CHIP8_DISPLAY_SCALE;
-  chip->display_y = CHIP8_DISPLAY_Y * CHIP8_DISPLAY_SCALE;
-  memset(chip->display_pixels, 0, sizeof(chip->display_pixels[0][0]) * chip->display_x * chip->display_y);
+  memset(chip->display_pixels, 0, sizeof(chip->display_pixels[0][0]) * CHIP8_DISPLAY_X * CHIP8_DISPLAY_Y);
 
   //initialize so we can use it for CXNN opcode
   srand(time(NULL));
@@ -265,11 +263,15 @@ void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc)
         chip->V[reg] = (rand() % 255) & chip->memory[pc + 1];
         break;
       case 0xD0: //DXYN - draw sprite at VX,VY width 8, height N
+        {
         reg = chip->memory[pc] & 0x0F;
-        printf("DRW   V%01X, V%01X, #%u\n", reg, (chip->memory[pc + 1] & 0xF0) >> 4, (chip->memory[pc + 1] & 0x0F));
+        uint8_t reg2 = (chip->memory[pc + 1] & 0xF0) >> 4;
+        value = chip->memory[pc + 1] & 0x0F;
+        printf("DRW   V%01X, V%01X, #%u\n", reg, reg2, value);
         //TODO do this
         // read in N bytes of memory starting at I
         //
+        }
         break;
       case 0xE0: //keyboard presses
         switch(chip->memory[pc + 1])
@@ -390,7 +392,7 @@ void chip8_build_keyboard(struct chip8_hw *chip)
 
 void chip8_update_keyboard(struct chip8_hw *chip, SDL_Event event, uint8_t pressed)
 {
-  for(int i=0; i < 16; i++)
+  for(uint8_t i=0; i < 16; i++)
   {
     if(event.key.keysym.sym == chip->keyboard.key[i])
     {
@@ -411,7 +413,7 @@ uint8_t chip8_poll_for_keypress(struct chip8_hw *chip)
     switch(keyevent.type)
     {
       case SDL_KEYDOWN:
-        for(int i = 0; i < 16; i++)
+        for(uint8_t i = 0; i < 16; i++)
         {
           if(keyevent.key.keysym.sym == chip->keyboard.key[i])
           {
