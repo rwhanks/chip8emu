@@ -85,6 +85,12 @@ void chip8_emulate_cycle(struct chip8_hw *chip);
 void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc);
 
 /*
+* Update the display
+* @param *chip - chip8_hw pointer
+*/
+void chip8_update_display(struct chip8_hw *chip);
+
+/*
 * Build the keyboard mapping
 * @param *chip - chip8_hw pointer
 */

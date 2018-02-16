@@ -264,13 +264,40 @@ void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc)
         break;
       case 0xD0: //DXYN - draw sprite at VX,VY width 8, height N
         {
-        reg = chip->memory[pc] & 0x0F;
-        uint8_t reg2 = (chip->memory[pc + 1] & 0xF0) >> 4;
-        value = chip->memory[pc + 1] & 0x0F;
-        printf("DRW   V%01X, V%01X, #%u\n", reg, reg2, value);
-        //TODO do this
-        // read in N bytes of memory starting at I
-        //
+          reg = chip->memory[pc] & 0x0F;
+          uint8_t reg2 = (chip->memory[pc + 1] & 0xF0) >> 4;
+          value = chip->memory[pc + 1] & 0x0F;
+          printf("DRW   V%01X, V%01X, #%u\n", reg, reg2, value);
+          //TODO do this
+          // read in N bytes of memory starting at I
+          // Display these bytes as sprites at (VX,VY) by XOR to existing screen
+          //   If erased VF = 1
+          //   Wraparound?
+          uint8_t pixel;
+          chip->V[0xF] = 0;
+          for(uint8_t y = 0; y < value; y++)
+          {
+            pixel = chip->memory[chip->I + y];
+            // Compare the set bits in I+y to those in the display_pixels
+            for(uint8_t x = 0; x < 8; x++)
+            {
+              // test bits in the pixel
+              if(0 != (pixel & (0x80 >> x)))
+              {
+                // against those already set in display_pixels
+                if(chip->display_pixels[x+reg][y+reg2] == 1)
+                {
+                  // collision
+                  chip->V[0xF] = 1;
+                }
+                // set the new display pixel
+                chip->display_pixels[x+reg][y+reg2] ^= 1;
+              }
+            }
+          }
+
+          // update the display based on new pixels
+          chip8_update_display(chip);
         }
         break;
       case 0xE0: //keyboard presses
@@ -358,6 +385,34 @@ void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc)
         printf("Unknown opcode: %04x\n", chip->memory[pc] << 8 | chip->memory[pc + 1]);
         break;
   }
+}
+
+void chip8_update_display(struct chip8_hw *chip)
+{
+  // https://wiki.libsdl.org/SDL_Rect
+  SDL_Rect rect;
+
+  rect.x = 0;
+  rect.y = 0;
+  rect.w = CHIP8_DISPLAY_X * CHIP8_DISPLAY_SCALE;
+  rect.h = CHIP8_DISPLAY_X * CHIP8_DISPLAY_SCALE;
+
+  uint8_t value = 0;
+
+  //TODO only update pixels that changed
+  for(uint8_t x = 0; x < CHIP8_DISPLAY_X; x++)
+  {
+    for(uint8_t y = 0; y < CHIP8_DISPLAY_Y; y++)
+    {
+      rect.x = x*CHIP8_DISPLAY_SCALE;
+      rect.y = y*CHIP8_DISPLAY_SCALE;
+      rect.w = CHIP8_DISPLAY_SCALE;
+      rect.h = CHIP8_DISPLAY_SCALE;
+      value = chip->display_pixels[x][y]*255;
+      SDL_FillRect(chip->screen, &rect, SDL_MapRGB(chip->screen->format, value, value, value));
+    }
+  }
+
 }
 
 void chip8_build_keyboard(struct chip8_hw *chip)
