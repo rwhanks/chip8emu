@@ -4,6 +4,8 @@
 #include <time.h>
 #include "chip8_hw.h"
 
+enum sdl_keymap
+
 void chip8_initialize(struct chip8_hw *chip)
 {
   memset(chip->memory, 0, CHIP8_MEM_SIZE);
@@ -21,18 +23,38 @@ void chip8_initialize(struct chip8_hw *chip)
   chip->delay_timer = 0; //60Hz
   chip->sound_timer = 0; //60Hz
 
+  chip->running = 0;
+
   chip8_build_sprites(chip);
+
+  chip->display_x = CHIP8_DISPLAY_X * CHIP8_DISPLAY_SCALE;
+  chip->display_y = CHIP8_DISPLAY_Y * CHIP8_DISPLAY_SCALE;
+  memset(chip->display_pixels, 0, sizeof(chip->display_pixels[0][0]) * chip->display_x * chip->display_y);
+
+  memset(chip->keyboard, 0, 16);
 
   //initialize so we can use it for CXNN opcode
   srand(time(NULL));
 }
 
-
 void chip8_emulate_cycle(struct chip8_hw *chip)
 {
+  // Check if a keyboard key is pressed
+  // TODO Not sure if this is the correct way/place to do this
+  SDL_Event event;
+  while(SDL_PollEvent(&event))
+  {
+    if(event.type == SDL_KEYDOWN)
+    {
+      chip8_update_keyboard(chip, event, 1);
+    }
+    else if(event.type == SDL_KEYUP)
+    {
+      chip8_update_keyboard(chip, event, 0);
+    }
+  }
   // Run 1 cycle of the CPU
   chip8_decode_opcode(chip, chip->pc);
-
 
   //Increment the PC
   //Note any opcodes that manipulated the PC will have done so in decode
@@ -58,6 +80,12 @@ void chip8_emulate_cycle(struct chip8_hw *chip)
   {
     printf("Sound timer expired!\n");
   }
+
+  //DEBUG if
+  if(!chip->running)
+  {
+    printf("Someting overwrote running\n");
+  }
 }
 
 
@@ -81,7 +109,8 @@ void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc)
           break;
         case 0xE0: //CLS - clear display
           printf("CLS\n");
-          //TODO do this
+          memset(chip->display_pixels, 0, sizeof(chip->display_pixels[0][0]) * CHIP8_DISPLAY_X * CHIP8_DISPLAY_Y);
+          //TODO redraw/refresh display?
           break;
         case 0xEE: //return from subroutine
           printf("RET\n");
@@ -242,17 +271,27 @@ void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc)
         reg = chip->memory[pc] & 0x0F;
         printf("DRW   V%01X, V%01X, #%u\n", reg, (chip->memory[pc + 1] & 0xF0) >> 4, (chip->memory[pc + 1] & 0x0F));
         //TODO do this
+        // read in N bytes of memory starting at I
+        //
         break;
       case 0xE0: //keyboard presses
         switch(chip->memory[pc + 1])
         {
           case 0x9E: //EX9E - skip next instruction if key with value in VX is pressed
-            printf("SKP   V%01X\n", chip->memory[pc] & 0x0F);
-            //TODO do this
+            reg = chip->memory[pc] & 0x0F;
+            printf("SKP   V%01X\n", reg);
+            if(1 == chip->keyboard[chip->V[reg]])
+            {
+              chip->pc += 2;
+            }
             break;
           case 0xA1: //EXA1 - skip next instruction if key with value in VX is NOT pressed
-            printf("SKNP  V%01X\n", chip->memory[pc] & 0x0F);
-            //TODO do this
+            reg = chip->memory[pc] & 0x0F;
+            printf("SKNP  V%01X\n", reg);
+            if(0 == chip->keyboard[chip->V[reg]])
+            {
+              chip->pc += 2;
+            }
             break;
           default:
             printf("Unknown opcode: %04x\n", chip->memory[pc] << 8 | chip->memory[pc + 1]);
@@ -267,8 +306,9 @@ void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc)
             chip->V[chip->memory[pc] & 0x0F] = chip->delay_timer;
             break;
           case 0x0A: //FX0A - blocks until key press and stores in VX
-            printf("LD    V%01X, K\n", chip->memory[pc] & 0x0F);
-            //TODO do this
+            reg = chip->memory[pc] & 0x0F;
+            printf("LD    V%01X, K\n", reg);
+            chip8_poll_for_keypress(chip, reg); //blocks
             break;
           case 0x15: //FX15 - set delay timer to VX
             printf("LD    DT, V%01X\n", chip->memory[pc] & 0x0F);
@@ -283,8 +323,10 @@ void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc)
             chip->I += chip->V[chip->memory[pc] & 0x0F];
             break;
           case 0x29: //FX29 - I = location of sprite for digit VX
-            printf("LD    F, V%01X\n", chip->memory[pc] & 0x0F);
-            //TODO do this
+            reg = chip->memory[pc] & 0x0F;
+            printf("LD    F, V%01X\n", reg);
+            // fonts start at 0x0 and is 5*16
+            chip->I = (chip->memory[chip->V[reg]] * 5);
             break;
           case 0x33: //FX33 - Store BCD of VX in I, I+1, I+2
             printf("LD    B, V%01X\n", chip->memory[pc] & 0x0F);
@@ -293,15 +335,17 @@ void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc)
             chip->memory[chip->I] = (chip->V[chip->memory[pc] & 0x0F] % 100) % 10;
             break;
           case 0x55: //FX55 - store V0 through VX in memory starting at location I
-            printf("LD    [I], V%01X\n", chip->memory[pc] & 0x0F);
-            for(i = 0; i < chip->memory[pc] & 0x0F; i++)
+            reg = chip->memory[pc] & 0x0F;
+            printf("LD    [I], V%01X\n",reg);
+            for(i = 0; i < reg; i++)
             {
               chip->memory[chip->I + i] = chip->V[i];
             }
             break;
           case 0x65: //FX65 - read from memory starting at I into V0 through VX
-            printf("LD    V%01X, [I]\n", chip->memory[pc] & 0x0F);
-            for(i = 0; i < chip->memory[pc] & 0x0F; i++)
+            reg = chip->memory[pc] & 0x0F;
+            printf("LD    V%01X, [I]\n", reg);
+            for(i = 0; i < reg; i++)
             {
               chip->V[i] = chip->memory[chip->I + i];
             }
@@ -314,6 +358,44 @@ void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc)
       default:
         printf("Unknown opcode: %04x\n", chip->memory[pc] << 8 | chip->memory[pc + 1]);
         break;
+  }
+}
+
+void chip8_update_keyboard(struct chip8_hw *chip, SDL_Event event, uint8_t pressed)
+{
+  // Shamelessly borrowed from somewhere on the Internet
+  switch(event.key.keysym.sym)
+  {
+    case SDLK_1: chip->keyboard[0x1] = pressed; break;
+    case SDLK_2: chip->keyboard[0x2] = pressed; break;
+    case SDLK_3: chip->keyboard[0x3] = pressed; break;
+    case SDLK_4: chip->keyboard[0xC] = pressed; break;
+    case SDLK_q: chip->keyboard[0x4] = pressed; break;
+    case SDLK_w: chip->keyboard[0x5] = pressed; break;
+    case SDLK_e: chip->keyboard[0x6] = pressed; break;
+    case SDLK_r: chip->keyboard[0xD] = pressed; break;
+    case SDLK_a: chip->keyboard[0x7] = pressed; break;
+    case SDLK_s: chip->keyboard[0x8] = pressed; break;
+    case SDLK_d: chip->keyboard[0x9] = pressed; break;
+    case SDLK_f: chip->keyboard[0xE] = pressed; break;
+    case SDLK_z: chip->keyboard[0xA] = pressed; break;
+    case SDLK_x: chip->keyboard[0x0] = pressed; break;
+    case SDLK_c: chip->keyboard[0xB] = pressed; break;
+    case SDLK_v: chip->keyboard[0xF] = pressed; break;
+    case SDLK_ESCAPE: exit(1); break;
+  }
+}
+
+uint8_t chip8_poll_for_keypress(struct chip8_hw *chip)
+{
+  SDL_Event keyevent;
+  while(SDL_PollEvent(&keyevent))
+  {
+    switch(keyevent.type)
+    {
+      case SDL_KEYDOWN:
+        return chip->keyboard[]
+    }
   }
 }
 

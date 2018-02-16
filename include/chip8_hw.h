@@ -1,8 +1,13 @@
+#pragma once
 
 #include <stdint.h>
+#include "SDL/SDL.h"
 
 #define CHIP8_STACK_SIZE 16
 #define CHIP8_MEM_SIZE 4096
+#define CHIP8_DISPLAY_SCALE 10
+#define CHIP8_DISPLAY_X 64
+#define CHIP8_DISPLAY_Y 32
 
 struct chip8_hw
 {
@@ -36,7 +41,19 @@ struct chip8_hw
 	uint8_t delay_timer; //60Hz
 	uint8_t sound_timer; //60Hz
 
+	uint8_t running; // ROM is currently executing
+
 	// TODO gfx, sound, keyboard
+	SDL_Surface *screen;
+
+  // the size of the display in scaled pixels
+	uint16_t display_x;
+	uint16_t display_y;
+
+  // array to hold the display pixels
+	uint8_t display_pixels[CHIP8_DISPLAY_X*CHIP8_DISPLAY_SCALE][CHIP8_DISPLAY_Y*CHIP8_DISPLAY_SCALE];
+
+	uint8_t keyboard[16]; //keyboard struct
 };
 
 
@@ -61,6 +78,14 @@ void chip8_emulate_cycle(struct chip8_hw *chip);
 * @param pc - current PC location TODO remove
 */
 void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc);
+
+/*
+* Update the chip8 keyboard based on a pressed/released key
+* @param *chip - chip8_hw pointer
+* @param event - the SDL_Event that was triggered; supported events:SDL_KEYDOWN, SDL_KEYUP
+* @param pressed - was the lhe key pressed(1) or released(0)?
+*/
+void chip8_update_keyboard(struct chip8_hw *chip, SDL_Event event, uint8_t pressed);
 
 /*
 * Build the sprite table for the user display
