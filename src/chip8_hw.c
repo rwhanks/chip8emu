@@ -89,7 +89,7 @@ void chip8_decode_opcode(struct chip8_hw *chip)
         case 0xE0: //CLS - clear display
           printf("CLS\n");
           memset(chip->display_pixels, 0, sizeof(chip->display_pixels[0][0]) * CHIP8_DISPLAY_X * CHIP8_DISPLAY_Y);
-          //TODO redraw/refresh display?
+          chip8_update_display(chip);
           chip->pc += 2;
           break;
         case 0xEE: //return from subroutine
@@ -493,7 +493,7 @@ void chip8_build_sprites(struct chip8_hw *chip)
                           0x20, 0x60, 0x20, 0x20, 0x70,  //1
                           0xF0, 0x10, 0xF0, 0x80, 0xF0,  //2
                           0xF0, 0x10, 0xF0, 0x10, 0xF0,  //3
-                          0x90, 0x90, 0xF0, 0x80, 0xF0,  //4
+                          0x90, 0x90, 0xF0, 0x10, 0x10,  //4
                           0xF0, 0x80, 0xF0, 0x10, 0xF0,  //5
                           0xF0, 0x80, 0xF0, 0x90, 0xF0,  //6
                           0xF0, 0x10, 0x20, 0x40, 0x40,  //7
