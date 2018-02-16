@@ -25,8 +25,18 @@ int main(int argc, char **argv)
   chip->rom_size = ftell(f);
   fseek(f, 0L, SEEK_SET);
 
-  fread(chip->memory + 0x200, chip->rom_size, 1, f);
-  fclose(f);
+  if(chip->rom_size < (CHIP8_MEM_SIZE - 0x200))
+  {
+    fread(chip->memory + 0x200, chip->rom_size, 1, f);
+    fclose(f);
+  }
+  else
+  {
+    printf("Error: ROM too large to fit in memory space, must be smaller than: %u\n", (CHIP8_MEM_SIZE - 0x200));
+    fclose(f);
+    free(chip);
+    exit(1);
+  }
 
   //Setup display
   SDL_Delay(16);
@@ -34,18 +44,16 @@ int main(int argc, char **argv)
   SDL_WM_SetCaption(argv[1], 0);
   chip->screen = SDL_SetVideoMode(CHIP8_DISPLAY_X * CHIP8_DISPLAY_SCALE, CHIP8_DISPLAY_Y * CHIP8_DISPLAY_SCALE, 0, 0);
 
+  //Start emulation
   printf("Running %s, hit ESC to exit\n", argv[1]);
   chip->running = 1;
-  //Start emulation
-  //DEBUG only run X instructions
-  uint32_t count = 0;
   while(chip->running )
   {
     chip8_emulate_cycle(chip);
-//    count++;
   }
 
-  //SDL_Quit(); //This frees chip->screen
+  free(chip);
+  SDL_Quit(); //This frees chip->screen
 
   return 0;
 }

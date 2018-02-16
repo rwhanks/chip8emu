@@ -34,8 +34,8 @@ void chip8_initialize(struct chip8_hw *chip)
 
 void chip8_emulate_cycle(struct chip8_hw *chip)
 {
+  //TODO implement some sort of scaling/slowdown
   // Check if a keyboard key is pressed
-  // TODO Not sure if this is the correct way/place to do this
   SDL_Event event;
   while(SDL_PollEvent(&event))
   {
@@ -56,26 +56,19 @@ void chip8_emulate_cycle(struct chip8_hw *chip)
   {
     chip->delay_timer--;
   }
-  else
-  {
-//    printf("Delay timer expired!\n");
-    //TODO do something?
-  }
 
   if(chip->sound_timer > 0)
   {
     //TODO play sound?
     chip->sound_timer--;
   }
-  else
-  {
-//    printf("Sound timer expired!\n");
-  }
+
+  // Lame hack
+  SDL_Delay(1);
 }
 
 
 // Private functions
-// TODO get rid of passed in chip->pc
 void chip8_decode_opcode(struct chip8_hw *chip)
 {
   // TODO make this less terrible than a giant switch
@@ -272,7 +265,6 @@ void chip8_decode_opcode(struct chip8_hw *chip)
           uint8_t reg2 = (chip->memory[chip->pc + 1] & 0xF0) >> 4;
           value = chip->memory[chip->pc + 1] & 0x0F;
           printf("DRW   V%01X, V%01X, #%u\n", reg, reg2, value);
-          //TODO do this
           // read in N bytes of memory starting at I
           // Display these bytes as sprites at (VX,VY) by XOR to existing screen
           //   If erased VF = 1

@@ -52,7 +52,7 @@ struct chip8_hw
 
 	uint8_t running; // ROM is currently executing
 
-	// TODO gfx, sound, keyboard
+	// TODO sound?
 	SDL_Surface *screen;
 
   // array to hold the display pixels
