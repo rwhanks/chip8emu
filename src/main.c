@@ -28,10 +28,10 @@ int main(int argc, char **argv)
   fclose(f);
 
   //Start emulation -- for now run until ctrl+c?
-  //while(1)
-  //{
+  while(1)
+  {
     chip8_emulate_cycle(chip);
-  //}
+  }
 
   return 0;
 }

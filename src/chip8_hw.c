@@ -30,19 +30,39 @@ void chip8_initialize(struct chip8_hw *chip)
 
 void chip8_emulate_cycle(struct chip8_hw *chip)
 {
-  //DEBUG: loop through everything and make sure we are decoding correctly
-  int pc = 0x200;
-  printf("Chip ROM size: %u\n", chip->rom_size);
-  while(pc < chip->rom_size + 0x200)
+  // Run 1 cycle of the CPU
+  chip8_decode_opcode(chip, chip->pc);
+
+
+  //Increment the PC
+  //Note any opcodes that manipulated the PC will have done so in decode
+  chip->pc += 2;
+
+  //Modify the timers
+  if(chip->delay_timer > 0)
   {
-    chip8_decode_opcode(chip, pc);
-    chip8_dump_registers(chip);
-    pc += 2;
+    chip->delay_timer--;
+  }
+  else
+  {
+    printf("Delay timer expired!\n");
+    //TODO do something?
+  }
+
+  if(chip->sound_timer > 0)
+  {
+    //TODO play sound?
+    chip->sound_timer--;
+  }
+  else
+  {
+    printf("Sound timer expired!\n");
   }
 }
 
 
 // Private functions
+// TODO get rid of passed in pc
 void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc)
 {
   // TODO make this less terrible than a giant switch
@@ -75,12 +95,12 @@ void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc)
       break;
       case 0x10: //1NNN - jump to address NNN
         value = (chip->memory[pc] & 0x0F) << 8 | chip->memory[pc + 1];
-        printf("JMP    $0x%03X\n", value);
+        printf("JMP   $0x%03X\n", value);
         chip->pc = value;
         break;
       case 0x20: //2NNN - call subroutine at NNN
         value = (chip->memory[pc] & 0x0F) << 8 | chip->memory[pc + 1];
-        printf("CALL    $0x%03X\n", value);
+        printf("CALL  $0x%03X\n", value);
         chip->sp++;
         chip->stack[chip->sp] = chip->pc;
         chip->pc = value;
@@ -97,7 +117,7 @@ void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc)
       case 0x40: //4XNN - if VX != NN then skip next instruction
         reg = chip->memory[pc] & 0x0F;
         value = chip->memory[pc + 1];
-        printf("SNE    V%01X, #%u\n", reg, value);
+        printf("SNE   V%01X, #%u\n", reg, value);
         if(chip->V[reg] != value)
         {
           chip->pc += 2;
@@ -117,7 +137,7 @@ void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc)
       case 0x70: //7XNN - Adds NN to VX (Carry flag is not changed)
         reg = chip->memory[pc] & 0x0F;
         value = chip->memory[pc + 1];
-        printf("ADD    V%01X, #%u\n", value, reg);
+        printf("ADD   V%01X, #%u\n", value, reg);
         chip->V[reg] += value;
         break;
       case 0x80: //bit operations & math, only the last nibble matters
@@ -132,15 +152,15 @@ void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc)
             chip->V[chip->memory[pc] & 0x0F] = chip->V[chip->memory[pc] & 0x0F] | chip->V[(chip->memory[pc + 1] & 0xF0) >> 4];
             break;
           case 0x2: //AND VX = VX & VY
-            printf("AND    V%01X, V%01X\n", chip->memory[pc] & 0x0F, (chip->memory[pc + 1] & 0xF0) >> 4);
+            printf("AND   V%01X, V%01X\n", chip->memory[pc] & 0x0F, (chip->memory[pc + 1] & 0xF0) >> 4);
             chip->V[chip->memory[pc] & 0x0F] = chip->V[chip->memory[pc] & 0x0F] & chip->V[(chip->memory[pc + 1] & 0xF0) >> 4];
             break;
           case 0x3: //XOR VX = VX ^ VY
-            printf("XOR    V%01X, V%01X\n", chip->memory[pc] & 0x0F, (chip->memory[pc + 1] & 0xF0) >> 4);
+            printf("XOR   V%01X, V%01X\n", chip->memory[pc] & 0x0F, (chip->memory[pc + 1] & 0xF0) >> 4);
             chip->V[chip->memory[pc] & 0x0F] = chip->V[chip->memory[pc] ^ 0x0F] & chip->V[(chip->memory[pc + 1] & 0xF0) >> 4];
             break;
           case 0x4: // ADD - VX = VX + VY w/carry
-            printf("ADD    V%01X, V%01X\n", chip->memory[pc] & 0x0F, (chip->memory[pc + 1] & 0xF0) >> 4);
+            printf("ADD   V%01X, V%01X\n", chip->memory[pc] & 0x0F, (chip->memory[pc + 1] & 0xF0) >> 4);
             if(chip->V[chip->memory[pc] & 0x0F] + chip->V[(chip->memory[pc + 1] & 0xF0) >> 4] > 0xFF)
             {
               //overflow
@@ -154,7 +174,7 @@ void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc)
               (chip->V[chip->memory[pc] & 0x0F] + chip->V[(chip->memory[pc + 1] & 0xF0) >> 4]) & 0xFF;
             break;
           case 0x5: // borrow subtraction VX = VX - VY
-            printf("SUB    V%01X, V%01X\n", chip->memory[pc] & 0x0F, (chip->memory[pc + 1] & 0xF0) >> 4);
+            printf("SUB   V%01X, V%01X\n", chip->memory[pc] & 0x0F, (chip->memory[pc + 1] & 0xF0) >> 4);
             if(chip->V[chip->memory[pc] & 0x0F] > chip->V[(chip->memory[pc + 1] & 0xF0) >> 4])
             {
               // NO borrow
@@ -169,11 +189,11 @@ void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc)
             break;
           case 0x6: //Wikipedia says one thing, but then a footnote that says this is VX = VX >> 1
             // Same with http://devernay.free.fr/hacks/chip8/C8TECH10.HTM#8xy6
-            printf("SHR    V%01X\n", chip->memory[pc] & 0x0F);
+            printf("SHR   V%01X\n", chip->memory[pc] & 0x0F);
             chip->V[chip->memory[pc] & 0x0F] = chip->V[chip->memory[pc] & 0x0F] >> 1;
             break;
           case 0x7: // borrow subtraction VX = VY - VX
-            printf("SUBN    V%01X, V%01X\n", chip->memory[pc] & 0x0F, (chip->memory[pc + 1] & 0xF0) >> 4);
+            printf("SUBN  V%01X, V%01X\n", chip->memory[pc] & 0x0F, (chip->memory[pc + 1] & 0xF0) >> 4);
             if(chip->V[(chip->memory[pc + 1] & 0xF0) >> 4] > chip->V[chip->memory[pc] & 0x0F])
             {
               // NO borrow
@@ -188,7 +208,7 @@ void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc)
             break;
           case 0xE: //Wikipedia says one thing, but then a footnote that says this is VX = VX << 1
             // Same with http://devernay.free.fr/hacks/chip8/C8TECH10.HTM#8xye
-            printf("SHL    V%01X\n", chip->memory[pc] & 0x0F);
+            printf("SHL   V%01X\n", chip->memory[pc] & 0x0F);
             chip->V[chip->memory[pc] & 0x0F] = chip->V[chip->memory[pc] & 0x0F] << 1;
             break;
           default:
@@ -197,7 +217,7 @@ void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc)
         }
         break;
       case 0x90: //9XY0 - if(VX != VY) skip next instruction
-        printf("SNE    V%01X, V%01X\n", chip->memory[pc] & 0x0F, (chip->memory[pc + 1] & 0xF0) >> 4);
+        printf("SNE   V%01X, V%01X\n", chip->memory[pc] & 0x0F, (chip->memory[pc + 1] & 0xF0) >> 4);
         if((chip->memory[pc] & 0x0F) != (chip->memory[pc + 1] & 0xF0) >> 4)
         {
           chip->pc += 2;
@@ -210,28 +230,28 @@ void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc)
         break;
       case 0xB0: //BNNN - jumps to address NNN + V0
         value = (chip->memory[pc] & 0x0F) << 8 | chip->memory[pc + 1];
-        printf("JMP    V0, $0x%03X\n", value);
+        printf("JMP   V0, $0x%03X\n", value);
         chip->pc = value + chip->V[0x0];
         break;
       case 0xC0: //CXNN - VX = rand() & NN
         reg = chip->memory[pc] & 0x0F;
-        printf("RND    V%01X, #%u\n", reg, chip->memory[pc + 1]);
+        printf("RND   V%01X, #%u\n", reg, chip->memory[pc + 1]);
         chip->V[reg] = (rand() % 255) & chip->memory[pc + 1];
         break;
       case 0xD0: //DXYN - draw sprite at VX,VY width 8, height N
         reg = chip->memory[pc] & 0x0F;
-        printf("DRW    V%01X, V%01X, %u\n", reg, (chip->memory[pc + 1] & 0xF0) >> 4, (chip->memory[pc + 1] & 0x0F));
+        printf("DRW   V%01X, V%01X, #%u\n", reg, (chip->memory[pc + 1] & 0xF0) >> 4, (chip->memory[pc + 1] & 0x0F));
         //TODO do this
         break;
       case 0xE0: //keyboard presses
         switch(chip->memory[pc + 1])
         {
           case 0x9E: //EX9E - skip next instruction if key with value in VX is pressed
-            printf("SKP    V%01X\n", chip->memory[pc] & 0x0F);
+            printf("SKP   V%01X\n", chip->memory[pc] & 0x0F);
             //TODO do this
             break;
           case 0xA1: //EXA1 - skip next instruction if key with value in VX is NOT pressed
-            printf("SKNP    V%01X\n", chip->memory[pc] & 0x0F);
+            printf("SKNP  V%01X\n", chip->memory[pc] & 0x0F);
             //TODO do this
             break;
           default:
@@ -259,7 +279,7 @@ void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc)
             chip->sound_timer = chip->V[chip->memory[pc] & 0x0F];
             break;
           case 0x1E: //FX1E - I = I + VX
-            printf("ADD    I, V%01X\n", chip->memory[pc] & 0x0F);
+            printf("ADD   I, V%01X\n", chip->memory[pc] & 0x0F);
             chip->I += chip->V[chip->memory[pc] & 0x0F];
             break;
           case 0x29: //FX29 - I = location of sprite for digit VX
@@ -299,7 +319,26 @@ void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc)
 
 void chip8_build_sprites(struct chip8_hw *chip)
 {
-  //TODO fill 0x000 to 0x1FF with sprite data
+  //Load the sprite table into somewhere in 0x000 to 0x1FFF
+  // 5 bytes * 16 characters
+  uint8_t chip8_font[] = {0xF0, 0x90, 0x90, 0x90, 0xF0,  //0
+                          0x20, 0x60, 0x20, 0x20, 0x70,  //1
+                          0xF0, 0x10, 0xF0, 0x80, 0xF0,  //2
+                          0xF0, 0x10, 0xF0, 0x10, 0xF0,  //3
+                          0x90, 0x90, 0xF0, 0x80, 0xF0,  //4
+                          0xF0, 0x80, 0xF0, 0x10, 0xF0,  //5
+                          0xF0, 0x80, 0xF0, 0x90, 0xF0,  //6
+                          0xF0, 0x10, 0x20, 0x40, 0x40,  //7
+                          0xF0, 0x90, 0xF0, 0x90, 0xF0,  //8
+                          0xF0, 0x90, 0xF0, 0x10, 0xF0,  //9
+                          0xF0, 0x90, 0xF0, 0x90, 0x90,  //A
+                          0xE0, 0x90, 0xE0, 0x90, 0xE0,  //B
+                          0xF0, 0x80, 0x80, 0x80, 0xF0,  //C
+                          0xE0, 0x90, 0x90, 0x90, 0xE0,  //D
+                          0xF0, 0x80, 0xF0, 0x80, 0xF0,  //E
+                          0xF0, 0x80, 0xF0, 0x80, 0x80   //F
+                        };
+    memcpy(&chip->memory[0], chip8_font, 80);
 }
 
 void chip8_dump_registers(struct chip8_hw *chip)
