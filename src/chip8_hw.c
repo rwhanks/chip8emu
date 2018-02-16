@@ -62,7 +62,7 @@ void chip8_emulate_cycle(struct chip8_hw *chip)
   }
   else
   {
-    printf("Delay timer expired!\n");
+//    printf("Delay timer expired!\n");
     //TODO do something?
   }
 
@@ -73,13 +73,7 @@ void chip8_emulate_cycle(struct chip8_hw *chip)
   }
   else
   {
-    printf("Sound timer expired!\n");
-  }
-
-  //DEBUG if
-  if(!chip->running)
-  {
-    printf("Someting overwrote running\n");
+//    printf("Sound timer expired!\n");
   }
 }
 
@@ -259,8 +253,9 @@ void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc)
         break;
       case 0xC0: //CXNN - VX = rand() & NN
         reg = chip->memory[pc] & 0x0F;
-        printf("RND   V%01X, #%u\n", reg, chip->memory[pc + 1]);
-        chip->V[reg] = (rand() % 255) & chip->memory[pc + 1];
+        value = chip->memory[pc + 1] & (rand() % 0xFF);
+        printf("RND   V%01X, #%u\n", reg, value);
+        chip->V[reg] = value;
         break;
       case 0xD0: //DXYN - draw sprite at VX,VY width 8, height N
         {
@@ -285,13 +280,13 @@ void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc)
               if(0 != (pixel & (0x80 >> x)))
               {
                 // against those already set in display_pixels
-                if(chip->display_pixels[x+reg][y+reg2] == 1)
+                if(chip->display_pixels[(x + chip->V[reg])][(y + chip->V[reg2])] == 1)
                 {
                   // collision
                   chip->V[0xF] = 1;
                 }
                 // set the new display pixel
-                chip->display_pixels[x+reg][y+reg2] ^= 1;
+                chip->display_pixels[(x + chip->V[reg])][(y + chip->V[reg2])] ^= 1;
               }
             }
           }
@@ -357,13 +352,13 @@ void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc)
           case 0x33: //FX33 - Store BCD of VX in I, I+1, I+2
             printf("LD    B, V%01X\n", chip->memory[pc] & 0x0F);
             chip->memory[chip->I] = chip->V[chip->memory[pc] & 0x0F] / 100;
-            chip->memory[chip->I] = (chip->V[chip->memory[pc] & 0x0F] / 10) % 10;
-            chip->memory[chip->I] = (chip->V[chip->memory[pc] & 0x0F] % 100) % 10;
+            chip->memory[chip->I+1] = (chip->V[chip->memory[pc] & 0x0F] / 10) % 10;
+            chip->memory[chip->I+2] = (chip->V[chip->memory[pc] & 0x0F] % 100) % 10;
             break;
           case 0x55: //FX55 - store V0 through VX in memory starting at location I
             reg = chip->memory[pc] & 0x0F;
             printf("LD    [I], V%01X\n",reg);
-            for(i = 0; i < reg; i++)
+            for(i = 0; i <= reg; i++)
             {
               chip->memory[chip->I + i] = chip->V[i];
             }
@@ -371,7 +366,7 @@ void chip8_decode_opcode(struct chip8_hw *chip, uint16_t pc)
           case 0x65: //FX65 - read from memory starting at I into V0 through VX
             reg = chip->memory[pc] & 0x0F;
             printf("LD    V%01X, [I]\n", reg);
-            for(i = 0; i < reg; i++)
+            for(i = 0; i <= reg; i++)
             {
               chip->V[i] = chip->memory[chip->I + i];
             }

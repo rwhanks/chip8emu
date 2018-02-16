@@ -37,12 +37,15 @@ int main(int argc, char **argv)
   printf("Running %s, hit ESC to exit\n", argv[1]);
   chip->running = 1;
   //Start emulation
-  while(chip->running)
+  //DEBUG only run X instructions
+  uint32_t count = 0;
+  while(chip->running && count < 50)
   {
     chip8_emulate_cycle(chip);
+    count++;
   }
 
-  SDL_Quit(); //This frees chip->screen
+  //SDL_Quit(); //This frees chip->screen
 
   return 0;
 }
