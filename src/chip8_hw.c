@@ -407,7 +407,6 @@ void chip8_draw_display(struct chip8_hw *chip)
 
   uint8_t value = 0;
 
-  //TODO only update pixels that changed
   for(uint8_t x = 0; x < CHIP8_DISPLAY_X; x++)
   {
     for(uint8_t y = 0; y < CHIP8_DISPLAY_Y; y++)
@@ -539,6 +538,7 @@ void chip8_build_sprites(struct chip8_hw *chip)
     memcpy(&chip->memory[0], chip8_font, 80);
 }
 
+// Debugging functions
 void chip8_dump_registers(struct chip8_hw *chip)
 {
   //Dump the current state of the registers

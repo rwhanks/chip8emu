@@ -130,3 +130,9 @@ void chip8_build_sprites(struct chip8_hw *chip);
 * @param *chip - chip8_hw pointer
 */
 void chip8_dump_registers(struct chip8_hw *chip);
+
+/*
+* Print the current display pixels for debugging
+* @param *chip - chip8_hw pointer
+*/
+void chip8_print_display_pixels(struct chip8_hw *chip);
