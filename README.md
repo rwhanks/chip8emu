@@ -5,18 +5,18 @@ Developed and tested in Ubuntu 16.04.1 x86_64
 
 ### Prerequisites
 GCC
-```
-sudo apt-get install gcc
-```
-
 SDL 1.2 development libraries
+CMake
 ```
-sudo apt-get install libsdl-dev
+sudo apt-get install gcc libsdl1.2-dev cmake
 ```
 
 ### Building
 ```
 gcc -g -o chip8_emu src/chip8_hw.c src/main.c -Iinclude
+mkdir _build && cd _build
+cmake ../
+make
 ```
 
 ### Running
