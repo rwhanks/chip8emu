@@ -66,8 +66,9 @@ struct chip8_hw
 /*
 * Initialize the chip8 emulator and build the sprite table
 * @param *chip - chip8_hw pointer
+* @param *rom_name - the name of the rom being emulated (used for window title)
 */
-void chip8_initialize(struct chip8_hw *chip);
+void chip8_initialize(struct chip8_hw *chip, const char *rom_name);
 
 /*
 * Emulate 1 cycle of the chip8 hardware including decoding the next opcode
@@ -84,10 +85,18 @@ void chip8_emulate_cycle(struct chip8_hw *chip);
 void chip8_decode_opcode(struct chip8_hw *chip);
 
 /*
-* Update the display
+* Draw the display
 * @param *chip - chip8_hw pointer
 */
-void chip8_update_display(struct chip8_hw *chip);
+void chip8_draw_display(struct chip8_hw *chip);
+
+/*
+* Redraw a display pixel that changed
+* @param *chip - chip8_hw pointer
+* @param xpos - xposition of the pixel that changed
+* @param ypos - yposition of the pixel that changed
+*/
+void chip8_update_display(struct chip8_hw *chip, uint16_t xpos, uint16_t ypos);
 
 /*
 * Build the keyboard mapping

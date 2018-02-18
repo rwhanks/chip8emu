@@ -4,7 +4,7 @@
 #include <time.h>
 #include "chip8_hw.h"
 
-void chip8_initialize(struct chip8_hw *chip)
+void chip8_initialize(struct chip8_hw *chip, const char *rom_name)
 {
   memset(chip->memory, 0, CHIP8_MEM_SIZE);
   chip->rom_size = 0;
@@ -27,6 +27,13 @@ void chip8_initialize(struct chip8_hw *chip)
   chip8_build_keyboard(chip);
 
   memset(chip->display_pixels, 0, sizeof(chip->display_pixels[0][0]) * CHIP8_DISPLAY_X * CHIP8_DISPLAY_Y);
+
+  //Setup display
+  SDL_Delay(16);
+  SDL_Init(SDL_INIT_EVERYTHING);
+  SDL_WM_SetCaption(rom_name, 0);
+  chip->screen = SDL_SetVideoMode(CHIP8_DISPLAY_X * CHIP8_DISPLAY_SCALE, CHIP8_DISPLAY_Y * CHIP8_DISPLAY_SCALE, 0, 0);
+  chip8_draw_display(chip);
 
   //initialize so we can use it for CXNN ochip->pcode
   srand(time(NULL));
@@ -89,7 +96,7 @@ void chip8_decode_opcode(struct chip8_hw *chip)
         case 0xE0: //CLS - clear display
           printf("CLS\n");
           memset(chip->display_pixels, 0, sizeof(chip->display_pixels[0][0]) * CHIP8_DISPLAY_X * CHIP8_DISPLAY_Y);
-          chip8_update_display(chip);
+          chip8_draw_display(chip);
           chip->pc += 2;
           break;
         case 0xEE: //return from subroutine
@@ -288,11 +295,12 @@ void chip8_decode_opcode(struct chip8_hw *chip)
                 }
                 // set the new display pixel
                 chip->display_pixels[(x + chip->V[reg])][(y + chip->V[reg2])] ^= 1;
+                chip8_update_display(chip, (x + chip->V[reg]), (y + chip->V[reg2]));
               }
             }
           }
           // update the display based on new pixels
-          chip8_update_display(chip);
+        //  chip8_update_display(chip);
         }
         chip->pc += 2;
         break;
@@ -316,7 +324,7 @@ void chip8_decode_opcode(struct chip8_hw *chip)
             }
             break;
           default:
-            printf("Unknown ochip->pcode: %04x\n", chip->memory[chip->pc] << 8 | chip->memory[chip->pc + 1]);
+            printf("Unknown opcode: %04x\n", chip->memory[chip->pc] << 8 | chip->memory[chip->pc + 1]);
             break;
         }
         chip->pc += 2;
@@ -375,19 +383,19 @@ void chip8_decode_opcode(struct chip8_hw *chip)
             }
             break;
           default:
-            printf("Unknown ochip->pcode: %04x\n", chip->memory[chip->pc] << 8 | chip->memory[chip->pc + 1]);
+            printf("Unknown opcode: %04x\n", chip->memory[chip->pc] << 8 | chip->memory[chip->pc + 1]);
             break;
         }
         chip->pc += 2;
         break;
       default:
-        printf("Unknown ochip->pcode: %04x\n", chip->memory[chip->pc] << 8 | chip->memory[chip->pc + 1]);
+        printf("Unknown opcode: %04x\n", chip->memory[chip->pc] << 8 | chip->memory[chip->pc + 1]);
         chip->pc += 2;
         break;
   }
 }
 
-void chip8_update_display(struct chip8_hw *chip)
+void chip8_draw_display(struct chip8_hw *chip)
 {
   // https://wiki.libsdl.org/SDL_Rect
   SDL_Rect rect;
@@ -413,6 +421,22 @@ void chip8_update_display(struct chip8_hw *chip)
     }
   }
 
+  // This is effectively SDL_UpdateRect(screen, 0, 0, 0, 0)
+  // https://www.libsdl.org/release/SDL-1.2.15/docs/html/sdlflip.html
+  SDL_Flip(chip->screen);
+}
+
+void chip8_update_display(struct chip8_hw *chip, uint16_t xpos, uint16_t ypos)
+{
+  // Draw the pixel that changed
+  SDL_Rect rect;
+  rect.x = xpos * CHIP8_DISPLAY_SCALE;
+  rect.y = ypos * CHIP8_DISPLAY_SCALE;
+  rect.w = CHIP8_DISPLAY_SCALE;
+  rect.h = CHIP8_DISPLAY_SCALE;
+  uint8_t value = chip->display_pixels[xpos][ypos]*255;
+
+  SDL_FillRect(chip->screen, &rect, SDL_MapRGB(chip->screen->format, value, value, value));
   SDL_Flip(chip->screen);
 }
 
@@ -464,8 +488,9 @@ void chip8_update_keyboard(struct chip8_hw *chip, SDL_Event event, uint8_t press
 uint8_t chip8_poll_for_keypress(struct chip8_hw *chip)
 {
   SDL_Event keyevent;
-/*
-  while(SDL_PollEvent(&keyevent))
+
+  uint8_t done = 0;
+  while(!done && SDL_WaitEvent(&keyevent))
   {
     switch(keyevent.type)
     {
@@ -479,36 +504,15 @@ uint8_t chip8_poll_for_keypress(struct chip8_hw *chip)
             return i;
           }
         }
+        if(keyevent.key.keysym.sym == SDLK_ESCAPE)
+        {
+          exit(1);
+        }
         break;
-       default:
+      default:
         break;
-      }
     }
-    */
-    uint8_t done = 0;
-    while(!done && SDL_WaitEvent(&keyevent))
-    {
-      switch(keyevent.type)
-      {
-        case SDL_KEYDOWN:
-          for(uint8_t i = 0; i < 16; i++)
-          {
-            if(keyevent.key.keysym.sym == chip->keyboard.key[i])
-            {
-              // Update that its pressed?
-              chip->keyboard.pressed[i] = 1;
-              return i;
-            }
-          }
-          if(keyevent.key.keysym.sym == SDLK_ESCAPE)
-          {
-            exit(1);
-          }
-          break;
-        default:
-          break;
-      }
-    }
+  }
 }
 
 void chip8_build_sprites(struct chip8_hw *chip)

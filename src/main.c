@@ -18,7 +18,7 @@ int main(int argc, char **argv)
   }
 
   struct chip8_hw *chip = malloc(sizeof(struct chip8_hw));
-  chip8_initialize(chip);
+  chip8_initialize(chip, argv[1]);
 
   //Read the ROM into memory starting at 0x200
   fseek(f, 0L, SEEK_END);
@@ -38,12 +38,6 @@ int main(int argc, char **argv)
     exit(1);
   }
 
-  //Setup display
-  SDL_Delay(16);
-  SDL_Init(SDL_INIT_EVERYTHING);
-  SDL_WM_SetCaption(argv[1], 0);
-  chip->screen = SDL_SetVideoMode(CHIP8_DISPLAY_X * CHIP8_DISPLAY_SCALE, CHIP8_DISPLAY_Y * CHIP8_DISPLAY_SCALE, 0, 0);
-
   //Start emulation
   printf("Running %s, hit ESC to exit\n", argv[1]);
   chip->running = 1;
@@ -52,8 +46,8 @@ int main(int argc, char **argv)
     chip8_emulate_cycle(chip);
   }
 
-  free(chip);
   SDL_Quit(); //This frees chip->screen
+  free(chip);
 
   return 0;
 }
