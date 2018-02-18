@@ -165,15 +165,15 @@ void chip8_decode_opcode(struct chip8_hw *chip)
             break;
           case 0x1: //OR - VX = VX | VY
             printf("OR   V%01X, V%01X\n", chip->memory[chip->pc] & 0x0F, (chip->memory[chip->pc + 1] & 0xF0) >> 4);
-            chip->V[chip->memory[chip->pc] & 0x0F] = chip->V[chip->memory[chip->pc] & 0x0F] | chip->V[(chip->memory[chip->pc + 1] & 0xF0) >> 4];
+            chip->V[chip->memory[chip->pc] & 0x0F] |= chip->V[(chip->memory[chip->pc + 1] & 0xF0) >> 4];
             break;
           case 0x2: //AND VX = VX & VY
             printf("AND   V%01X, V%01X\n", chip->memory[chip->pc] & 0x0F, (chip->memory[chip->pc + 1] & 0xF0) >> 4);
-            chip->V[chip->memory[chip->pc] & 0x0F] = chip->V[chip->memory[chip->pc] & 0x0F] & chip->V[(chip->memory[chip->pc + 1] & 0xF0) >> 4];
+            chip->V[chip->memory[chip->pc] & 0x0F] &= chip->V[(chip->memory[chip->pc + 1] & 0xF0) >> 4];
             break;
           case 0x3: //XOR VX = VX ^ VY
             printf("XOR   V%01X, V%01X\n", chip->memory[chip->pc] & 0x0F, (chip->memory[chip->pc + 1] & 0xF0) >> 4);
-            chip->V[chip->memory[chip->pc] & 0x0F] = chip->V[chip->memory[chip->pc] & 0x0F] ^ chip->V[(chip->memory[chip->pc + 1] & 0xF0) >> 4];
+            chip->V[chip->memory[chip->pc] & 0x0F] ^= chip->V[(chip->memory[chip->pc + 1] & 0xF0) >> 4];
             break;
           case 0x4: // ADD - VX = VX + VY w/carry
             printf("ADD   V%01X, V%01X\n", chip->memory[chip->pc] & 0x0F, (chip->memory[chip->pc + 1] & 0xF0) >> 4);
