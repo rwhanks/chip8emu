@@ -173,7 +173,7 @@ void chip8_decode_opcode(struct chip8_hw *chip)
             break;
           case 0x3: //XOR VX = VX ^ VY
             printf("XOR   V%01X, V%01X\n", chip->memory[chip->pc] & 0x0F, (chip->memory[chip->pc + 1] & 0xF0) >> 4);
-            chip->V[chip->memory[chip->pc] & 0x0F] = chip->V[chip->memory[chip->pc] ^ 0x0F] & chip->V[(chip->memory[chip->pc + 1] & 0xF0) >> 4];
+            chip->V[chip->memory[chip->pc] & 0x0F] = chip->V[chip->memory[chip->pc] & 0x0F] ^ chip->V[(chip->memory[chip->pc + 1] & 0xF0) >> 4];
             break;
           case 0x4: // ADD - VX = VX + VY w/carry
             printf("ADD   V%01X, V%01X\n", chip->memory[chip->pc] & 0x0F, (chip->memory[chip->pc + 1] & 0xF0) >> 4);
@@ -464,6 +464,7 @@ void chip8_update_keyboard(struct chip8_hw *chip, SDL_Event event, uint8_t press
 uint8_t chip8_poll_for_keypress(struct chip8_hw *chip)
 {
   SDL_Event keyevent;
+/*
   while(SDL_PollEvent(&keyevent))
   {
     switch(keyevent.type)
@@ -481,6 +482,31 @@ uint8_t chip8_poll_for_keypress(struct chip8_hw *chip)
         break;
        default:
         break;
+      }
+    }
+    */
+    uint8_t done = 0;
+    while(!done && SDL_WaitEvent(&keyevent))
+    {
+      switch(keyevent.type)
+      {
+        case SDL_KEYDOWN:
+          for(uint8_t i = 0; i < 16; i++)
+          {
+            if(keyevent.key.keysym.sym == chip->keyboard.key[i])
+            {
+              // Update that its pressed?
+              chip->keyboard.pressed[i] = 1;
+              return i;
+            }
+          }
+          if(keyevent.key.keysym.sym == SDLK_ESCAPE)
+          {
+            exit(1);
+          }
+          break;
+        default:
+          break;
       }
     }
 }
