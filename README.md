@@ -17,9 +17,17 @@ make
 ```
 
 ### Running
+Arguments:
 ```
-./chip8_emu ROMfile
+-r ROM_file : ROM file to emulate/decode (REQUIRED)
+-d : Dump the ROM file assembly to stdout
 ```
+Running:
+```
+./chip8_emu -r ROMfile
+```
+
+ESC to Exit
 
 #### Keyboard Mapping
 ```

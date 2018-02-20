@@ -39,11 +39,12 @@ void chip8_initialize(struct chip8_hw *chip, const char *rom_name)
   srand(time(NULL));
 }
 
-void chip8_emulate_cycle(struct chip8_hw *chip)
+void chip8_emulate_cycle(struct chip8_hw *chip, uint8_t dump_flag)
 {
   //TODO implement some sort of scaling/slowdown
   // Check if a keyboard key is pressed
   SDL_Event event;
+  uint16_t old_pc = chip->pc;
   while(SDL_PollEvent(&event))
   {
     if(event.type == SDL_KEYDOWN)
@@ -70,8 +71,15 @@ void chip8_emulate_cycle(struct chip8_hw *chip)
     chip->sound_timer--;
   }
 
+  if(dump_flag)
+  {
+    // If we are just dumping the ROM, set the pc to +2 from its previous value
+    // we won't care about register state, etc
+    chip->pc = old_pc + 2;
+  }
+
   // Lame hack
-  SDL_Delay(1);
+  SDL_Delay(2);
 }
 
 
