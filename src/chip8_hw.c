@@ -304,12 +304,11 @@ void chip8_decode_opcode(struct chip8_hw *chip)
                 }
                 // set the new display pixel
                 chip->display_pixels[(x + chip->V[reg])][(y + chip->V[reg2])] ^= 1;
+                // update the display based on new pixels
                 chip8_update_display(chip, (x + chip->V[reg]), (y + chip->V[reg2]));
               }
             }
           }
-          // update the display based on new pixels
-        //  chip8_update_display(chip);
         }
         chip->pc += 2;
         break;
@@ -488,7 +487,7 @@ void chip8_update_keyboard(struct chip8_hw *chip, SDL_Event event, uint8_t press
     }
     else if(event.key.keysym.sym == SDLK_ESCAPE)
     {
-      exit(1);
+      chip->running = 0;
     }
   }
 }
@@ -514,7 +513,8 @@ uint8_t chip8_poll_for_keypress(struct chip8_hw *chip)
         }
         if(keyevent.key.keysym.sym == SDLK_ESCAPE)
         {
-          exit(1);
+          chip->running = 0;
+          return 0; // return a dummy value here because we are exiting
         }
         break;
       default:
