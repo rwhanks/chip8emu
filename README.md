@@ -27,10 +27,10 @@ Running:
 ./chip8_emu -r ROMfile
 ```
 
-ESC to Exit
-
 #### Keyboard Mapping
 ```
+ESC to Exit 
+
 Real keys      Emulated keys
 |1|2|3|4|  ==  |1|2|3|C|
 |q|w|e|r|  ==  |4|5|6|D|
