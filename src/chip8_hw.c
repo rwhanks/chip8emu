@@ -35,13 +35,13 @@ void chip8_initialize(struct chip8_hw *chip, const char *rom_name)
   chip->screen = SDL_SetVideoMode(CHIP8_DISPLAY_X * CHIP8_DISPLAY_SCALE, CHIP8_DISPLAY_Y * CHIP8_DISPLAY_SCALE, 0, 0);
   chip8_draw_display(chip);
 
-  //initialize so we can use it for CXNN ochip->pcode
+  //initialize so we can use it for CXNN opcode
   srand(time(NULL));
 }
 
 void chip8_emulate_cycle(struct chip8_hw *chip, uint8_t dump_flag)
 {
-  //TODO implement some sort of scaling/slowdown
+  //TODO implement some sort of scaling/slowdown better than just the delay at the bottom
   // Check if a keyboard key is pressed
   SDL_Event event;
   uint16_t old_pc = chip->pc;
@@ -59,6 +59,7 @@ void chip8_emulate_cycle(struct chip8_hw *chip, uint8_t dump_flag)
   // Run 1 cycle of the CPU
   chip8_decode_opcode(chip);
 
+  //TODO implement real timing so these run at 60Hz in actual clock time
   //Modify the timers
   if(chip->delay_timer > 0)
   {
@@ -243,7 +244,7 @@ void chip8_decode_opcode(struct chip8_hw *chip)
             chip->V[chip->memory[chip->pc] & 0x0F] = chip->V[chip->memory[chip->pc] & 0x0F] << 1;
             break;
           default:
-            printf("Unknown ochip->pcode: %04x\n", chip->memory[chip->pc] << 8 | chip->memory[chip->pc + 1]);
+            printf("Unknown opcode: %04x\n", chip->memory[chip->pc] << 8 | chip->memory[chip->pc + 1]);
             break;
         }
         chip->pc += 2;
