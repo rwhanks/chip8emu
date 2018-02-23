@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 2.8.11)
 project(chip8_emu)
+set(CMAKE_C_FLAGS "-g")
 
 find_package(SDL REQUIRED)
 
