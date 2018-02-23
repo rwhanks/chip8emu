@@ -6,6 +6,9 @@
 
 #define CHIP8_STACK_SIZE 16
 #define CHIP8_MEM_SIZE 4096
+// Use this to emulate a slowdown and give our timers a realistic time
+#define CHIP8_CYCLES_PER_SECOND 500
+
 #define CHIP8_DISPLAY_SCALE 10
 #define CHIP8_DISPLAY_X 64
 #define CHIP8_DISPLAY_Y 32
@@ -71,6 +74,20 @@ struct chip8_hw
 void chip8_initialize(struct chip8_hw *chip, const char *rom_name);
 
 /*
+* Run the emulator
+* @param *chip - chip8_hw pointer
+*/
+void chip8_run(struct chip8_hw *chip);
+
+/*
+*Print the assembly instructions for the ROM to stdout
+* @param *chip - chip8_hw pointer
+*/
+void chip8_decode_rom(struct chip8_hw *chip);
+
+
+// Private functions
+/*
 * Emulate 1 cycle of the chip8 hardware including decoding the next opcode
 * @param *chip - chip8_hw pointer
 * @param dump_flag - used to dump just the assembly, the pc is restored at the end of the chip8_emulate_cycle
@@ -78,8 +95,6 @@ void chip8_initialize(struct chip8_hw *chip, const char *rom_name);
 */
 void chip8_emulate_cycle(struct chip8_hw *chip, uint8_t dump_flag);
 
-
-// Private functions
 /*
 * Decode an opcode at the current PC -- PC is NOT updated after returning
 * @param *chip - chip8_hw pointer

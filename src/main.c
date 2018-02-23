@@ -71,21 +71,12 @@ int main(int argc, char **argv)
   if(!dump_flag)
   {
     printf("Running %s, hit ESC to exit\n", rom_name);
-    chip->running = 1;
-    while(chip->running)
-    {
-      chip8_emulate_cycle(chip, dump_flag);
-    }
+    chip8_run(chip);
   }
   else
   {
-    //TODO make this better because if we use any block on keyboard input instructions, those keys will
-    // need to be pressed to continue
-    //Dump the contents of the ROM
-    while(chip->pc < (0x200 + chip->rom_size))
-    {
-      chip8_emulate_cycle(chip, dump_flag);
-    }
+    printf("Decoding ROM %s\n", rom_name);
+    chip8_decode_rom(chip);
   }
 
   SDL_Quit(); //This frees chip->screen

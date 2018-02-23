@@ -39,12 +39,32 @@ void chip8_initialize(struct chip8_hw *chip, const char *rom_name)
   srand(time(NULL));
 }
 
+void chip8_run(struct chip8_hw *chip)
+{
+    chip->running = 1;
+    while(chip->running)
+    {
+      chip8_emulate_cycle(chip, 0);
+    }
+}
+
+void chip8_decode_rom(struct chip8_hw *chip)
+{
+  //TODO make this better because if we use any block on keyboard input instructions, those keys will
+  // need to be pressed to continue
+  //Dump the contents of the ROM
+  while(chip->pc < (0x200 + chip->rom_size))
+  {
+    chip8_emulate_cycle(chip, 1);
+  }
+}
+
 void chip8_emulate_cycle(struct chip8_hw *chip, uint8_t dump_flag)
 {
   //TODO implement some sort of scaling/slowdown better than just the delay at the bottom
-  // Check if a keyboard key is pressed
-  SDL_Event event;
   uint16_t old_pc = chip->pc;
+  SDL_Event event;
+  // Check if a keyboard key is pressed
   while(SDL_PollEvent(&event))
   {
     if(event.type == SDL_KEYDOWN)
@@ -120,7 +140,7 @@ void chip8_decode_opcode(struct chip8_hw *chip)
           chip->sp--;
           break;
         default:
-          printf("Unknown opcode: %04x\n", chip->memory[chip->pc] << 8 | chip->memory[chip->pc + 1]);
+          printf("Ignored opcode: %04x\n", chip->memory[chip->pc] << 8 | chip->memory[chip->pc + 1]);
           chip->pc += 2;
           break;
       }
