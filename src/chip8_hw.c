@@ -41,11 +41,13 @@ void chip8_initialize(struct chip8_hw *chip, const char *rom_name)
 
 void chip8_run(struct chip8_hw *chip)
 {
-    chip->running = 1;
-    while(chip->running)
-    {
-      chip8_emulate_cycle(chip, 0);
-    }
+  uint32_t cycle_count = 0;
+  chip->running = 1;
+  while(chip->running)
+  {
+    chip8_emulate_cycle(chip, cycle_count);
+    cycle_count++;
+  }
 }
 
 void chip8_decode_rom(struct chip8_hw *chip)
@@ -53,16 +55,22 @@ void chip8_decode_rom(struct chip8_hw *chip)
   //TODO make this better because if we use any block on keyboard input instructions, those keys will
   // need to be pressed to continue
   //Dump the contents of the ROM
+  uint16_t old_pc = 0;
+  uint32_t cycle_count = 0;
   while(chip->pc < (0x200 + chip->rom_size))
   {
-    chip8_emulate_cycle(chip, 1);
+    old_pc = chip->pc;
+    chip8_emulate_cycle(chip, cycle_count);
+    // Since we are just sequentially parsing the ROM, increment the pc form where it was previously
+    // and effectively ignoring whatever the actual instruction did
+    chip->pc = old_pc + 2;
+    cycle_count++;
   }
 }
 
-void chip8_emulate_cycle(struct chip8_hw *chip, uint8_t dump_flag)
+void chip8_emulate_cycle(struct chip8_hw *chip, uint32_t cycle_count)
 {
   //TODO implement some sort of scaling/slowdown better than just the delay at the bottom
-  uint16_t old_pc = chip->pc;
   SDL_Event event;
   // Check if a keyboard key is pressed
   while(SDL_PollEvent(&event))
@@ -86,22 +94,15 @@ void chip8_emulate_cycle(struct chip8_hw *chip, uint8_t dump_flag)
 
   //TODO implement real timing so these run at 60Hz in actual clock time
   //Modify the timers
-  if(chip->delay_timer > 0)
+  if(chip->delay_timer > 0 && (cycle_count % (CHIP8_CYCLES_PER_SECOND / 60) == 0))
   {
     chip->delay_timer--;
   }
 
-  if(chip->sound_timer > 0)
+  if(chip->sound_timer > 0 && (cycle_count % (CHIP8_CYCLES_PER_SECOND / 60) == 0))
   {
     //TODO play sound?
     chip->sound_timer--;
-  }
-
-  if(dump_flag)
-  {
-    // If we are just dumping the ROM, set the pc to +2 from its previous value
-    // we won't care about register state, etc
-    chip->pc = old_pc + 2;
   }
 
   // Lame hack

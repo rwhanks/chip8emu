@@ -90,10 +90,9 @@ void chip8_decode_rom(struct chip8_hw *chip);
 /*
 * Emulate 1 cycle of the chip8 hardware including decoding the next opcode
 * @param *chip - chip8_hw pointer
-* @param dump_flag - used to dump just the assembly, the pc is restored at the end of the chip8_emulate_cycle
-*                    so that the ROM will be processed sequentially
+* @param cycle_count - total number of cycles executed -- used for time modifications
 */
-void chip8_emulate_cycle(struct chip8_hw *chip, uint8_t dump_flag);
+void chip8_emulate_cycle(struct chip8_hw *chip, uint32_t cycle_count);
 
 /*
 * Decode an opcode at the current PC -- PC is NOT updated after returning
